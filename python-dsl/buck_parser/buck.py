@@ -18,7 +18,7 @@ import abc
 import collections
 import contextlib
 import functools
-import imp
+import hashlib
 import inspect
 import json
 import optparse
@@ -68,6 +68,11 @@ from .util import (
     is_in_dir,
     is_special,
 )
+
+if not PY3:
+    # This module is not used in python3.
+    # Importing it in python3 generates a warning.
+    import imp
 
 
 # When build files are executed, the functions in this file tagged with
@@ -1538,7 +1543,11 @@ class BuildFileProcessor(object):
         frame = get_caller_frame(skip=["_functools", __name__])
         if namespace is not None:
             # If using a fresh namespace, create a fresh module to populate.
-            fresh_module = imp.new_module(namespace)
+            if PY3:
+                fresh_module = types.ModuleType(namespace)
+            else:
+                # this method handles str/unicode in py2
+                fresh_module = imp.new_module(path)
             fresh_module.__file__ = mod.__file__
             self._merge_globals(mod, fresh_module.__dict__)
             frame.f_globals[namespace] = fresh_module
@@ -1827,7 +1836,11 @@ class BuildFileProcessor(object):
 
             # Build a new module for the given file, using the default globals
             # created above.
-            module = imp.new_module(path)
+            if PY3:
+                module = types.ModuleType(path)
+            else:
+                # this method handles str/unicode in py2
+                module = imp.new_module(path)
             module.__file__ = path
             module.__dict__.update(default_globals)
 
